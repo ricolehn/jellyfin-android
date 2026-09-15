@@ -11,4 +11,5 @@ data class PlayerWebPreferences(
     val maxStreamingBitrateRemote: Int,
     val preferredTranscodeVideoCodec: String? = null,
     val preferredTranscodeVideoAudioCodec: String? = null,
+    val preferFmp4HlsContainer: Boolean? = null,
 ) : Parcelable

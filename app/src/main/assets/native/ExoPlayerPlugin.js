@@ -33,12 +33,28 @@ export class ExoPlayerPlugin {
         const preferredTranscodeVideoAudioCodec = typeof this.appSettings.preferredTranscodeVideoAudioCodec === 'function'
             ? this.appSettings.preferredTranscodeVideoAudioCodec()
             : null;
+        let preferFmp4HlsContainer = null;
+        if (typeof this.appSettings.preferFmp4HlsContainer === 'function') {
+            preferFmp4HlsContainer = this.appSettings.preferFmp4HlsContainer();
+        } else if (typeof this.appSettings.preferFmp4HlsContainer === 'boolean') {
+            preferFmp4HlsContainer = this.appSettings.preferFmp4HlsContainer;
+        } else if (typeof this.appSettings.preferForHls === 'function') {
+            preferFmp4HlsContainer = this.appSettings.preferForHls();
+        } else if (typeof this.appSettings.get === 'function') {
+            const val = this.appSettings.get('preferFmp4HlsContainer') ?? this.appSettings.get('preferForHls');
+            if (typeof val === 'boolean') {
+                preferFmp4HlsContainer = val;
+            } else if (typeof val === 'string') {
+                preferFmp4HlsContainer = val === 'true';
+            }
+        }
 
         const preferences = {
             maxStreamingBitrateLocal: this.appSettings.maxStreamingBitrate(true, 'Video'),
             maxStreamingBitrateRemote: this.appSettings.maxStreamingBitrate(false, 'Video'),
             preferredTranscodeVideoCodec: preferredTranscodeVideoCodec || null,
             preferredTranscodeVideoAudioCodec: preferredTranscodeVideoAudioCodec || null,
+            preferFmp4HlsContainer: preferFmp4HlsContainer !== null ? preferFmp4HlsContainer : null,
         };
 
         this._paused = false;
