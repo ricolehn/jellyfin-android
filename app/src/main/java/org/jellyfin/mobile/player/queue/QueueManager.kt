@@ -81,10 +81,12 @@ class QueueManager(
         val preferredAudioCodec = preferences?.preferredTranscodeVideoAudioCodec?.ifBlank { null }
             ?: appPreferences.preferredTranscodeVideoAudioCodec.ifBlank { null }
 
+        val preferFmp4Hls = preferences?.preferFmp4HlsContainer ?: appPreferences.preferFmp4HlsContainer
+
         deviceProfile = deviceProfileBuilder.getDeviceProfile(
             preferredVideoCodec = preferredVideoCodec,
             preferredAudioCodec = preferredAudioCodec,
-            preferFmp4Hls = appPreferences.preferFmp4HlsContainer,
+            preferFmp4Hls = preferFmp4Hls,
         )
 
         val itemId = when {

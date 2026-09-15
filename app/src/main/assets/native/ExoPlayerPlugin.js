@@ -33,12 +33,16 @@ export class ExoPlayerPlugin {
         const preferredTranscodeVideoAudioCodec = typeof this.appSettings.preferredTranscodeVideoAudioCodec === 'function'
             ? this.appSettings.preferredTranscodeVideoAudioCodec()
             : null;
+        const preferFmp4HlsContainer = typeof this.appSettings.preferFmp4HlsContainer === 'function'
+            ? this.appSettings.preferFmp4HlsContainer()
+            : (typeof this.appSettings.preferFmp4HlsContainer === 'boolean' ? this.appSettings.preferFmp4HlsContainer : null);
 
         const preferences = {
             maxStreamingBitrateLocal: this.appSettings.maxStreamingBitrate(true, 'Video'),
             maxStreamingBitrateRemote: this.appSettings.maxStreamingBitrate(false, 'Video'),
             preferredTranscodeVideoCodec: preferredTranscodeVideoCodec || null,
             preferredTranscodeVideoAudioCodec: preferredTranscodeVideoAudioCodec || null,
+            preferFmp4HlsContainer: preferFmp4HlsContainer !== null ? preferFmp4HlsContainer : null,
         };
 
         this._paused = false;
