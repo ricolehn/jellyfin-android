@@ -9,4 +9,6 @@ import kotlinx.serialization.Serializable
 data class PlayerWebPreferences(
     val maxStreamingBitrateLocal: Int,
     val maxStreamingBitrateRemote: Int,
+    val preferredTranscodeVideoCodec: String? = null,
+    val preferredTranscodeVideoAudioCodec: String? = null,
 ) : Parcelable

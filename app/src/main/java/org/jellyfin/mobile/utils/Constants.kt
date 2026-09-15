@@ -48,6 +48,9 @@ object Constants {
     const val PREF_SUBTITLE_STYLE = "pref_subtitle_style"
     const val PREF_STORAGE_LOCATION = "pref_storage_location"
     const val PREF_MEDIA_SEGMENT_ACTIONS = "pref_media_segment_actions"
+    const val PREF_PREFERRED_TRANSCODE_VIDEO_CODEC = "pref_preferred_transcode_video_codec"
+    const val PREF_PREFERRED_TRANSCODE_VIDEO_AUDIO_CODEC = "pref_preferred_transcode_video_audio_codec"
+    const val PREF_PREFER_FMP4_HLS_CONTAINER = "pref_prefer_fmp4_hls_container"
 
     // InputManager commands
     const val PLAYBACK_MANAGER_COMMAND_PLAY = "unpause"

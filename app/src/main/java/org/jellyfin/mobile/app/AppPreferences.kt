@@ -128,6 +128,15 @@ class AppPreferences(context: Context) {
     val exoPlayerNetworkBuffer: String
         get() = sharedPreferences.getString(Constants.PREF_EXOPLAYER_NETWORK_BUFFER, Constants.NETWORK_BUFFER_AUTO)!!
 
+    val preferFmp4HlsContainer: Boolean
+        get() = sharedPreferences.getBoolean(Constants.PREF_PREFER_FMP4_HLS_CONTAINER, true)
+
+    val preferredTranscodeVideoCodec: String
+        get() = sharedPreferences.getString(Constants.PREF_PREFERRED_TRANSCODE_VIDEO_CODEC, "")!!
+
+    val preferredTranscodeVideoAudioCodec: String
+        get() = sharedPreferences.getString(Constants.PREF_PREFERRED_TRANSCODE_VIDEO_AUDIO_CODEC, "")!!
+
     @ExternalPlayerPackage
     var externalPlayerApp: String
         get() = sharedPreferences.getString(Constants.PREF_EXTERNAL_PLAYER_APP, ExternalPlayerPackage.SYSTEM_DEFAULT)!!

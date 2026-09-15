@@ -27,9 +27,18 @@ export class ExoPlayerPlugin {
         options.ids = options.items.map(item => item.Id);
         delete options.items;
 
+        const preferredTranscodeVideoCodec = typeof this.appSettings.preferredTranscodeVideoCodec === 'function'
+            ? this.appSettings.preferredTranscodeVideoCodec()
+            : null;
+        const preferredTranscodeVideoAudioCodec = typeof this.appSettings.preferredTranscodeVideoAudioCodec === 'function'
+            ? this.appSettings.preferredTranscodeVideoAudioCodec()
+            : null;
+
         const preferences = {
             maxStreamingBitrateLocal: this.appSettings.maxStreamingBitrate(true, 'Video'),
             maxStreamingBitrateRemote: this.appSettings.maxStreamingBitrate(false, 'Video'),
+            preferredTranscodeVideoCodec: preferredTranscodeVideoCodec || null,
+            preferredTranscodeVideoAudioCodec: preferredTranscodeVideoAudioCodec || null,
         };
 
         this._paused = false;

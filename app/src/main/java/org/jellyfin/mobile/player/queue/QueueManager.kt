@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.source.MediaSource
 import androidx.media3.exoplayer.source.MergingMediaSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.jellyfin.mobile.app.AppPreferences
 import org.jellyfin.mobile.data.dao.DownloadDao
 import org.jellyfin.mobile.downloads.DownloadFileType
 import org.jellyfin.mobile.player.PlayerException
@@ -49,7 +50,8 @@ class QueueManager(
     private val mediaSourceResolver: MediaSourceResolver by inject()
     private val deviceProfileBuilder: DeviceProfileBuilder by inject()
     private val downloadDao: DownloadDao by inject()
-    private val deviceProfile = deviceProfileBuilder.getDeviceProfile()
+    private val appPreferences: AppPreferences by inject()
+    private var deviceProfile = deviceProfileBuilder.getDeviceProfile()
 
     private var currentQueue: List<UUID> = emptyList()
     private var currentQueueIndex: Int = 0
@@ -73,6 +75,17 @@ class QueueManager(
         currentQueue = playOptions.ids
         currentQueueIndex = playOptions.startIndex
         resetPlaybackFallback()
+
+        val preferredVideoCodec = preferences?.preferredTranscodeVideoCodec?.ifBlank { null }
+            ?: appPreferences.preferredTranscodeVideoCodec.ifBlank { null }
+        val preferredAudioCodec = preferences?.preferredTranscodeVideoAudioCodec?.ifBlank { null }
+            ?: appPreferences.preferredTranscodeVideoAudioCodec.ifBlank { null }
+
+        deviceProfile = deviceProfileBuilder.getDeviceProfile(
+            preferredVideoCodec = preferredVideoCodec,
+            preferredAudioCodec = preferredAudioCodec,
+            preferFmp4Hls = appPreferences.preferFmp4HlsContainer,
+        )
 
         val itemId = when {
             currentQueue.isNotEmpty() -> currentQueue[currentQueueIndex]
