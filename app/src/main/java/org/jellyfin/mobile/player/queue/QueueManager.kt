@@ -53,6 +53,11 @@ class QueueManager(
     private val appPreferences: AppPreferences by inject()
     private var deviceProfile = deviceProfileBuilder.getDeviceProfile()
 
+    private var preferredVideoCodec: String? = null
+    private var preferredAudioCodec: String? = null
+    private var userPreferFmp4Hls: Boolean = false
+    private var fallbackDisableFmp4: Boolean = false
+
     private var currentQueue: List<UUID> = emptyList()
     private var currentQueueIndex: Int = 0
 
@@ -76,18 +81,13 @@ class QueueManager(
         currentQueueIndex = playOptions.startIndex
         resetPlaybackFallback()
 
-        val preferredVideoCodec = preferences?.preferredTranscodeVideoCodec?.ifBlank { null }
+        preferredVideoCodec = preferences?.preferredTranscodeVideoCodec?.ifBlank { null }
             ?: appPreferences.preferredTranscodeVideoCodec.ifBlank { null }
-        val preferredAudioCodec = preferences?.preferredTranscodeVideoAudioCodec?.ifBlank { null }
+        preferredAudioCodec = preferences?.preferredTranscodeVideoAudioCodec?.ifBlank { null }
             ?: appPreferences.preferredTranscodeVideoAudioCodec.ifBlank { null }
+        userPreferFmp4Hls = preferences?.preferFmp4HlsContainer ?: appPreferences.preferFmp4HlsContainer
 
-        val preferFmp4Hls = preferences?.preferFmp4HlsContainer ?: appPreferences.preferFmp4HlsContainer
-
-        deviceProfile = deviceProfileBuilder.getDeviceProfile(
-            preferredVideoCodec = preferredVideoCodec,
-            preferredAudioCodec = preferredAudioCodec,
-            preferFmp4Hls = preferFmp4Hls,
-        )
+        updateDeviceProfile()
 
         val itemId = when {
             currentQueue.isNotEmpty() -> currentQueue[currentQueueIndex]
@@ -220,9 +220,20 @@ class QueueManager(
         }
     }
 
+    private fun updateDeviceProfile() {
+        val currentPreferFmp4Hls = userPreferFmp4Hls && !fallbackDisableFmp4
+        deviceProfile = deviceProfileBuilder.getDeviceProfile(
+            preferredVideoCodec = preferredVideoCodec,
+            preferredAudioCodec = preferredAudioCodec,
+            preferFmp4Hls = currentPreferFmp4Hls,
+        )
+    }
+
     private fun resetPlaybackFallback() {
         playbackRetries = 0
         lastPlaybackError = 0L
+        fallbackDisableFmp4 = false
+        updateDeviceProfile()
         viewModel.cancelFallbackRetry()
     }
 
@@ -251,6 +262,22 @@ class QueueManager(
         if (playbackRetries > MAX_PLAYBACK_RETRIES) return false
 
         Timber.i("Retrying playback (attempt %d of %d)", playbackRetries, MAX_PLAYBACK_RETRIES)
+
+        if (currentMediaSource.playMethod == PlayMethod.TRANSCODE && userPreferFmp4Hls && !fallbackDisableFmp4) {
+            Timber.w("fMP4 transcoding failed, falling back to MPEG-TS for this stream")
+            fallbackDisableFmp4 = true
+            updateDeviceProfile()
+
+            return startRemotePlayback(
+                itemId = currentMediaSource.itemId,
+                mediaSourceId = currentMediaSource.id,
+                maxStreamingBitrate = currentMediaSource.maxStreamingBitrate,
+                startTime = startPosition,
+                audioStreamIndex = currentMediaSource.selectedAudioStreamIndex,
+                subtitleStreamIndex = currentMediaSource.selectedSubtitleStreamIndex,
+                playWhenReady = true,
+            ) == null
+        }
 
         // If already transcoding, only retry once (for transient errors); flags are null on
         // retry 1 anyway, so no special-casing needed in the startRemotePlayback call.
