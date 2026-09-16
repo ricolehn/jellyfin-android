@@ -34,6 +34,7 @@ import org.jellyfin.sdk.model.api.MediaStream
 import org.jellyfin.sdk.model.api.MediaStreamProtocol
 import org.jellyfin.sdk.model.api.MediaStreamType
 import org.jellyfin.sdk.model.api.PlayMethod
+import org.jellyfin.sdk.model.extensions.ticks
 import org.jellyfin.sdk.model.serializer.toUUIDOrNull
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
@@ -52,6 +53,7 @@ class QueueManager(
     private val downloadDao: DownloadDao by inject()
     private val appPreferences: AppPreferences by inject()
     private var deviceProfile = deviceProfileBuilder.getDeviceProfile()
+    private var preferFmp4Hls: Boolean = appPreferences.preferFmp4HlsContainer
 
     private var currentQueue: List<UUID> = emptyList()
     private var currentQueueIndex: Int = 0
@@ -82,6 +84,7 @@ class QueueManager(
             ?: appPreferences.preferredTranscodeVideoAudioCodec.ifBlank { null }
 
         val preferFmp4Hls = preferences?.preferFmp4HlsContainer ?: appPreferences.preferFmp4HlsContainer
+        this.preferFmp4Hls = preferFmp4Hls
 
         deviceProfile = deviceProfileBuilder.getDeviceProfile(
             preferredVideoCodec = preferredVideoCodec,
@@ -188,7 +191,39 @@ class QueueManager(
             subtitleStreamIndex = subtitleStreamIndex,
             enableDirectPlay = enableDirectPlay,
             enableDirectStream = enableDirectStream,
-        ).onSuccess { jellyfinMediaSource ->
+        ).onSuccess { initialMediaSource ->
+            val audioStream = initialMediaSource.selectedAudioStream
+                ?: (if (audioStreamIndex != null) {
+                    initialMediaSource.mediaStreams.find { it.type == MediaStreamType.AUDIO && it.index == audioStreamIndex }
+                } else {
+                    initialMediaSource.mediaStreams.find {
+                        it.type == MediaStreamType.AUDIO && it.index == initialMediaSource.sourceInfo.defaultAudioStreamIndex
+                    }
+                }) ?: initialMediaSource.audioStreams.firstOrNull()
+
+            val isAtStart = startTime == null || startTime == Duration.ZERO || startTime.inWholeTicks == 0L
+            val isDtsTranscodeFmp4 = preferFmp4Hls &&
+                initialMediaSource.playMethod == PlayMethod.TRANSCODE &&
+                isAtStart &&
+                isDtsAudioStream(audioStream)
+
+            val jellyfinMediaSource = if (isDtsTranscodeFmp4) {
+                Timber.i("DTS audio track transcode with fMP4-HLS starting at 0: applying 250ms offset")
+                mediaSourceResolver.resolveMediaSource(
+                    itemId = itemId,
+                    mediaSourceId = mediaSourceId,
+                    deviceProfile = deviceProfile,
+                    maxStreamingBitrate = maxStreamingBitrate,
+                    startTime = DTS_START_OFFSET_TICKS.ticks,
+                    audioStreamIndex = audioStreamIndex,
+                    subtitleStreamIndex = subtitleStreamIndex,
+                    enableDirectPlay = enableDirectPlay,
+                    enableDirectStream = enableDirectStream,
+                ).getOrDefault(initialMediaSource)
+            } else {
+                initialMediaSource
+            }
+
             // Ensure transcoding of the current element is stopped
             getCurrentMediaSourceOrNull()?.let { oldMediaSource ->
                 viewModel.stopTranscoding(oldMediaSource as RemoteJellyfinMediaSource)
@@ -516,8 +551,20 @@ class QueueManager(
         return true
     }
 
+    private fun isDtsAudioStream(stream: MediaStream?): Boolean {
+        if (stream == null) return false
+        val codec = stream.codec
+        val profile = stream.profile
+        val isDtsCodec = codec?.equals("dts", ignoreCase = true) == true ||
+            codec?.equals("dca", ignoreCase = true) == true ||
+            codec?.contains("dts", ignoreCase = true) == true
+        val isDtsProfile = profile?.contains("dts", ignoreCase = true) == true
+        return isDtsCodec || isDtsProfile
+    }
+
     companion object {
         private const val MAX_PLAYBACK_RETRIES = 3
         private const val PLAYBACK_RETRY_RESET_MS = 30_000L
+        private const val DTS_START_OFFSET_TICKS = 2_500_000L
     }
 }
