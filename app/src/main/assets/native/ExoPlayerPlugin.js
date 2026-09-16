@@ -41,7 +41,7 @@ export class ExoPlayerPlugin {
         } else if (typeof this.appSettings.preferForHls === 'function') {
             preferFmp4HlsContainer = this.appSettings.preferForHls();
         } else if (typeof this.appSettings.get === 'function') {
-            const val = this.appSettings.get('preferFmp4HlsContainer') ?? this.appSettings.get('preferForHls');
+            const val = this.appSettings.get('preferFmp4HlsContainer') ?? this.appSettings.get('preferForHls') ?? this.appSettings.get('preferFmp4Hls');
             if (typeof val === 'boolean') {
                 preferFmp4HlsContainer = val;
             } else if (typeof val === 'string') {
