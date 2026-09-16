@@ -117,6 +117,9 @@ class DeviceProfileBuilder(
 
         for (i in SUPPORTED_CONTAINER_FORMATS.indices) {
             val container = SUPPORTED_CONTAINER_FORMATS[i]
+            if (!preferFmp4Hls && container == "fmp4") {
+                continue
+            }
             if (supportedVideoCodecs[i].isNotEmpty()) {
                 containerProfiles.add(
                     ContainerProfile(type = DlnaProfileType.VIDEO, container = container, conditions = emptyList()),
